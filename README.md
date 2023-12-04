@@ -12,8 +12,16 @@ torchvision >= 0.9.0
 BC-GAN
 
 ## dataset 
+Dowload MNIST, fashion mnist and cifar10 dataset at the official website.
+MNIST: download and extract the mnist. Then, place those four ubyte files to .\data\mnist
+Homepage: http://yann.lecun.com/exdb/mnist/
 
-mnist, 8fashion, cifar10
+8-fashion: download and extract the Fashion MNIST. Then, place the place those four ubyte files folder to .\datasets\8fashion
+Homepage: https://www.kaggle.com/datasets/zalando-research/fashionmnist/
+
+CIFAR-10: download and extract CIFAR-10 python version. Then, place the thumbnails128x128 folder to .\datasets\cifar10  
+Homepage: https://www.cs.toronto.edu/~kriz/cifar.html
+
 
 
 ## Usage
