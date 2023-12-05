@@ -12,7 +12,7 @@ if __name__ == '__main__':
     random.seed(1)
     torch.manual_seed(1)
     args = args_parser()
-    #preprocessData(args)
+    preprocessData(args)
     FL = ClientUpdate(args)
     getdata = GetDataSet(args)
 
