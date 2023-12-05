@@ -28,18 +28,18 @@ class GetDataSet(object):
 
         if self.args.dataset == 'mnist' or self.args.dataset == '8fashion':
             
-            #分配给num_clients个train_loader
+         
             test_images = np.load(test_data)
             test_labels = np.load(test_label)
 
-            X_test = torch.from_numpy(test_images.reshape(-1, 1, 28, 28)).float()  # 输入 x 张量
+            X_test = torch.from_numpy(test_images.reshape(-1, 1, 28, 28)).float()  
 
-            Y_test = torch.from_numpy(test_labels).long()  # 输入 y 张量
+            Y_test = torch.from_numpy(test_labels).long()  
             X_test = X_test / 255
             X_test = transforms.Normalize([0.5], [0.5])(X_test)
             print(X_test.size())
             print(Y_test.size())
-            testDataset = torch.utils.data.TensorDataset(X_test, Y_test)  # 合并训练数据和目标数据
+            testDataset = torch.utils.data.TensorDataset(X_test, Y_test)  
             print("testDataset size:", len(testDataset))
             self.test_loader = torch.utils.data.DataLoader(
                 dataset=testDataset,
@@ -51,27 +51,26 @@ class GetDataSet(object):
             train_images = np.load(train_data)
             train_labels = np.load(train_label)
 
-            X_train = torch.from_numpy(train_images.reshape(-1, 1, 28, 28)).float()  # 输入 x 张量
+            X_train = torch.from_numpy(train_images.reshape(-1, 1, 28, 28)).float()  
 
-            Y_train = torch.from_numpy(train_labels).long()  # 输入 y 张量
+            Y_train = torch.from_numpy(train_labels).long() 
             X_train = X_train / 255
             X_train = transforms.Normalize([0.5], [0.5])(X_train)
             print(X_train.size())
             print(Y_train.size())
             self.classdivide(X_train,Y_train)
         elif self.args.dataset == 'cifar10':
-            #分配给num_clients个train_loader
             test_images = np.load(test_data)
             test_labels = np.load(test_label)
 
-            X_test = np.transpose(test_images, (0, 3, 1, 2))  # 输入 x 张量
+            X_test = np.transpose(test_images, (0, 3, 1, 2))  
             X_test = torch.from_numpy(X_test).float()
-            Y_test = torch.from_numpy(test_labels).long()  # 输入 y 张量
+            Y_test = torch.from_numpy(test_labels).long()  
             X_test = X_test / 255
             X_test = transforms.Normalize((0.5,),(0.5,))(X_test)
             print(X_test.size())
             print(Y_test.size())
-            testDataset = torch.utils.data.TensorDataset(X_test, Y_test)  # 合并训练数据和目标数据
+            testDataset = torch.utils.data.TensorDataset(X_test, Y_test) 
             print("testDataset size:", len(testDataset))
             self.test_loader = torch.utils.data.DataLoader(
                 dataset=testDataset,
@@ -83,10 +82,10 @@ class GetDataSet(object):
             train_images = np.load(train_data)
             train_labels = np.load(train_label)
 
-            X_train = np.transpose(train_images, (0, 3, 1, 2))  # 输入 x 张量
+            X_train = np.transpose(train_images, (0, 3, 1, 2))  
             X_train = torch.from_numpy(X_train).float()
 
-            Y_train = torch.from_numpy(train_labels).long()  # 输入 y 张量
+            Y_train = torch.from_numpy(train_labels).long()  
             X_train = X_train / 255
             X_train = transforms.Normalize((0.5,),(0.5,))(X_train)
             print(X_train.size())
@@ -98,14 +97,14 @@ class GetDataSet(object):
 
     def classdivide(self,X_train,Y_train):
         for i in range(self.args.num_classes):
-            # 找到 Y_train 中标签为 2 的索引
+           
             indices = (Y_train == i).nonzero().squeeze()
 
-            # 使用这些索引从 X_train 中提取相应的数据
+            
             selected_X = X_train[indices]
             selected_Y = Y_train[indices]
             print(selected_X.shape,selected_Y.shape)
-            trainDataset = torch.utils.data.TensorDataset(selected_X, selected_Y)  # 合并训练数据和目标数据
+            trainDataset = torch.utils.data.TensorDataset(selected_X, selected_Y)  
             self.divide_data(trainDataset,i)
         
         print(len(self.NICO_train_dataset))
@@ -115,7 +114,7 @@ class GetDataSet(object):
                 print("len==0")
                 for j in range(self.args.num_clients):
                     if len(self.NICO_train_dataset[j])!=0:
-                        # 使用 copy.deepcopy() 创建数据集副本
+                        
                         import copy
                         self.NICO_train_dataset[i] = copy.deepcopy(self.NICO_train_dataset[j])
                         print("len NICO_train_dataset[]: ", i, len(self.NICO_train_dataset[i]))
@@ -130,8 +129,8 @@ class GetDataSet(object):
         del self.NICO_train_dataset
 
     def divide_data(self, trainDataset, j):
-        #使用随机种子，将总的数据集分配给所有的客户端
-        random.seed(42)  # 设置随机种子
+        
+        random.seed(42)  
         numbers = [random.random() for _ in range(self.args.num_clients)]
         total_sum = sum(numbers)
         normalized_numbers = [x / total_sum for x in numbers]
