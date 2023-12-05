@@ -14,25 +14,24 @@ from torch.autograd import Variable
 from torchvision.utils import save_image
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 class Client:
     def __init__(self, id, training_set):
         self.id = id
-        self.training_set = training_set  # 客户端训练集
-        self.weights = [0.8]  # 客户端权重,初始权重0.8,下一次权重更新，使用滑动权重策略
+        self.training_set = training_set  
+        self.weights = [0.8]  
 
 class TrustedServer:
     def __init__(self, clients):
-        self.clients = clients  # 客户端列表
-        self.accuracy_array = []  # 准确率数组,每一次聚合前记录一次本地ITS准确率
+        self.clients = clients  
+        self.accuracy_array = []  
         self.local_index=0
 
 
 class ClientUpdate(object):
     def __init__(self, args):
         self.args = args
-        self.auxiliary_loss = nn.CrossEntropyLoss().to(device)#真假损失函数
-        self.adversarial_loss = nn.BCELoss().to(device)#分类损失函数
+        self.auxiliary_loss = nn.CrossEntropyLoss().to(device)
+        self.adversarial_loss = nn.BCELoss().to(device)
         self.cdataloader=[]
         
 
@@ -40,10 +39,10 @@ class ClientUpdate(object):
         global_dnet, global_gnet, clients_gnet, clients_dnet = None, None, None, None
         if self.args.model == 'BC-GAN' and self.args.dataset == 'cifar10':
             print('-----model:{}   dataset:{}'.format(self.args.model, self.args.dataset))
-            #全局判别器
+            
             global_dnet = Discriminatorcifar(self.args).to(device)
             global_gnet = Generatorcifar(self.args).to(device)
-            #中间信任服务器的生成器和判别器
+            
             clients_gnet = [Generatorcifar(self.args).to(device) for _ in range(self.args.num_its)]
             clients_dnet = [Discriminatorcifar(self.args).to(device) for _ in range(self.args.num_its)]
         else:
@@ -65,10 +64,10 @@ class ClientUpdate(object):
         global_dnet, global_gnet, clients_gnet, clients_dnet = None, None, None, None
         if self.args.model == 'BC-GAN':
             print('-----model:{}   dataset:{}'.format(self.args.model, self.args.dataset))
-            #全局判别器
+           
             global_dnet = Discriminatormnist(self.args).to(device)
             global_gnet = Generatormnist(self.args).to(device)
-            #中间信任服务器的生成器和判别器
+            
             clients_gnet = [Generatormnist(self.args).to(device) for _ in range(self.args.num_its)]
             clients_dnet = [Discriminatormnist(self.args).to(device) for _ in range(self.args.num_its)]
         else:
@@ -85,11 +84,11 @@ class ClientUpdate(object):
         optimizerd = [torch.optim.Adam(model.parameters(), lr=self.args.lr, betas=(self.args.b1, self.args.b2)) for model in clients_dnet]
         return global_dnet, global_gnet, clients_gnet, clients_dnet, optimizerg, optimizerd
 
-    #BM_FL中单ITS上的训练mnist和fashion
+    
     def client_train_bmfl(self, generator, discriminator,optimizer_G, optimizer_D, discriminatorlast, trustedServer):
         epoch_loss=[]
         for wep in range(self.args.w_epochs):
-            #获取当前客户端权重下的数据集
+            
             hdataloader = self.getdataloader(trustedServer)
             for lep in range(self.args.train_ep):
                 for i, (imgs, labels) in enumerate(hdataloader):
@@ -106,7 +105,7 @@ class ClientUpdate(object):
                     # ----------------- 
                     optimizer_G.zero_grad()
                     # Sample noise and labels as generator input
-                    #z服从标准正态分布（均值为0，标准差为1）的随机数
+                   
                     z = torch.randn((batch_size, self.args.latent_dim)).to(device)
                     gen_labels = torch.randint(0, self.args.num_classes, (batch_size,)).to(device)
 
@@ -152,11 +151,11 @@ class ClientUpdate(object):
                 print("[epoch %d/%d] [WEpoch %d/%d] [LEpoch %d/%d] [D loss: %f , acc: %f%%] [G loss: %f]" % (trustedServer.local_index,self.args.epoch,wep,self.args.w_epochs,lep,self.args.train_ep, d_loss.item(), 100 * d_acc, g_loss.item()))
 
                     
-            # 使用上一次权重更新的判别器模型更新数据集权重
+            
             closs = []
             avgloss = 0.0
             for j in range(len(self.cdataloader)):
-                # 计算每个客户端数据集的平均损失以及整体的平均损失
+               
                 temploss = 0.0
                 for i, (imgs, labels) in enumerate(self.cdataloader[j]):
                     with torch.no_grad():
@@ -174,11 +173,10 @@ class ClientUpdate(object):
             avgloss = sum(closs)/len(closs)
             #print(avgloss,closs)
             for j in range(len(self.cdataloader)):
-                # 更新权重
                 cwight = trustedServer.clients[j].weights[-1]
                 cwight = cwight + (closs[j] - avgloss) * (trustedServer.local_index +1) * 0.3
                 trustedServer.clients[j].weights.append(cwight)
-                #滑动更新
+                
                 self.sliding_average_update(trustedServer.clients[j].weights,self.args.slidL)
                 if trustedServer.clients[j].weights[-1] > self.args.wup:
                     trustedServer.clients[j].weights[-1] = self.args.wup
@@ -189,7 +187,7 @@ class ClientUpdate(object):
         trustedServer.local_index = trustedServer.local_index +1
         return sum(epoch_loss)/len(epoch_loss)
 
-    # 预训练
+    
     def client_train_preacgan_mnist(self, generator, discriminator,optimizer_G, optimizer_D, train_loader):
         for epoch in range(self.args.pre_epochs):
             for i, (imgs, labels) in enumerate(train_loader):
@@ -267,21 +265,21 @@ class ClientUpdate(object):
             X_train = []
             Y_train = []
             for sample in i.training_set.dataset:
-                # print(sample[0])  # 输出输入特征，检查其内容
-                # print(sample[1])  # 输出标签，检查其内容
+                # print(sample[0])  
+                # print(sample[1]) 
                 X_train.append(sample[0])
                 Y_train.append(sample[1])
             
-            # 将 X_train 和 Y_train 转换为张量
+            
             X_train = torch.stack(X_train)
             Y_train = torch.stack(Y_train)
 
             #print(len(X_train), i.weights[-1], math.floor(len(X_train) * i.weights[-1]))
-            # 取前len*w行数据
+            
             X_train = X_train[:math.floor(len(X_train) * i.weights[-1])]
             Y_train = Y_train[:math.floor(len(Y_train) * i.weights[-1])]
 
-            trainDataset = torch.utils.data.TensorDataset(X_train, Y_train)  # 合并训练数据和目标数据
+            trainDataset = torch.utils.data.TensorDataset(X_train, Y_train)  
             dataloader = torch.utils.data.DataLoader(
                 dataset=trainDataset,
                 batch_size=self.args.train_bs,
@@ -334,18 +332,16 @@ class ClientUpdate(object):
                 real_pred, real_aux = global_net(data)
 
                 d_real_loss = (self.adversarial_loss(real_pred, valid) + self.auxiliary_loss(real_aux, target)) / 2
-                total_loss += d_real_loss.item()  # 累积损失
+                total_loss += d_real_loss.item()  
                 pred = real_aux.argmax(dim=1)
-                total_correct += pred.eq(target).sum().item()  # 累积正确的样本数
-                total_samples += batch_size  # 累积总样本数
+                total_correct += pred.eq(target).sum().item()  
+                total_samples += batch_size  
         average_loss = total_loss / len(test_loader)
         accuracy = total_correct / total_samples
         return average_loss, accuracy
 
 
-    #滑动平均
     def sliding_average_update(self, arr, L):
-        # 获取数组的长度
         length = len(arr)
 
         if length < L:
@@ -355,7 +351,7 @@ class ClientUpdate(object):
 
         arr[-1] = avg
 
-    # 预训练cifar10
+  
     def client_train_preacgan_cifar(self, generator, discriminator,optimizer_G, optimizer_D, train_loader):
         for epoch in range(self.args.pre_epochs):
             for i, (imgs, labels) in enumerate(train_loader):
@@ -430,7 +426,7 @@ class ClientUpdate(object):
 
         self.sample_cifarimage(self.args.num_classes, epoch + 1, generator)
 
-    #生成cifar10
+   
     def sample_cifarimage(self, n_row, batches_done, generator):
         """Saves a grid of generated digits ranging from 0 to num_classes"""
         # Sample noise
@@ -446,11 +442,10 @@ class ClientUpdate(object):
             os.makedirs(file_path)
         save_image(gen_imgs.data, file_path+"%d.png" % batches_done, nrow=n_row, normalize=True)
 
-    #BM_FL中单ITS上的训练cifar10
+
     def client_train_bmflcifar(self, generator, discriminator,optimizer_G, optimizer_D, discriminatorlast, trustedServer):
         epoch_loss=[]
         for wep in range(self.args.w_epochs):
-            #获取当前客户端权重下的数据集
             hdataloader = self.getdataloader(trustedServer)
             for lep in range(self.args.train_ep):
                 for i, (imgs, labels) in enumerate(hdataloader):
@@ -522,11 +517,10 @@ class ClientUpdate(object):
 
                     print ("[epoch %d/%d] [WEpoch %d/%d] [LEpoch %d/%d] [Batch %d/%d] [D loss: %f , acc: %f%%] [G loss: %f]" % (trustedServer.local_index,self.args.epoch,wep,self.args.w_epochs,lep,self.args.train_ep, i, len(hdataloader)-2,
                                                                         d_loss.data.cpu(), 100*d_acc, g_loss.data.cpu()))
-            # 使用上一次权重更新的判别器模型更新数据集权重
+        
             closs = []
             avgloss = 0.0
             for j in range(len(self.cdataloader)):
-                # 计算每个客户端数据集的平均损失以及整体的平均损失
                 temploss = 0.0
                 for i, (imgs, labels) in enumerate(self.cdataloader[j]):
                     with torch.no_grad():
@@ -552,11 +546,10 @@ class ClientUpdate(object):
             avgloss = sum(closs)/len(closs)
             epoch_loss.append(avgloss)
             for j in range(len(self.cdataloader)):
-                # 更新权重
                 cwight = trustedServer.clients[j].weights[-1]
                 cwight = cwight + (closs[j] - avgloss) * (trustedServer.local_index +1) * 0.3
                 trustedServer.clients[j].weights.append(cwight)
-                #滑动更新
+             
                 self.sliding_average_update(trustedServer.clients[j].weights,self.args.slidL)
                 if trustedServer.clients[j].weights[-1] > self.args.wup:
                     trustedServer.clients[j].weights[-1] = self.args.wup
@@ -567,7 +560,6 @@ class ClientUpdate(object):
         trustedServer.local_index = trustedServer.local_index +1
         return sum(epoch_loss)/len(epoch_loss)
     
-    #测试cifar10
     def testcifar10(self, global_net, test_loader):
         global_net.eval()
         total_loss = 0.0
@@ -589,14 +581,13 @@ class ClientUpdate(object):
                 real_y = real_y.expand(-1, -1, img_size, img_size) # 64 10 32 32
 
                 # Loss for real images
-
                 real_pred, real_aux = global_net(real_imgs, real_y)
 
                 d_real_loss = (self.adversarial_loss(real_pred.squeeze(), valid) + self.auxiliary_loss(real_aux, labels)) / 2
-                total_loss += d_real_loss.item()  # 累积损失
+                total_loss += d_real_loss.item()  
                 pred = real_aux.argmax(dim=1)
-                total_correct += pred.eq(target).sum().item()  # 累积正确的样本数
-                total_samples += batch_size  # 累积总样本数
+                total_correct += pred.eq(target).sum().item() 
+                total_samples += batch_size 
         average_loss = total_loss / (len(test_loader)-2)
         accuracy = total_correct / total_samples
         return average_loss, accuracy
